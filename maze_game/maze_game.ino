@@ -150,7 +150,7 @@ void readArduino(BLEDevice arduino){
 
           // TODO: Move ball
           // Erase old pixel
-          matrix.drawPixel((uint8_t)curX, (uint8_t)curY, 0);
+          matrix.drawPixel((uint8_t)curX, (uint8_t)curY, matrix.color565(0,0,0));
 
           //Maximum speed of 1 block every 200 milliseconds
           //Draw new 
