@@ -15,23 +15,32 @@
   uint8_t clockPin   = 27; // Must be on same port as rgbPins
   uint8_t latchPin   = 32;
   uint8_t oePin      = 33;
+  enum COLOR {BLANK, MAGENTA, GREEN, RED, ORANGE, YELLOW, GOLD};
+  uint8_t colors[][] = {{0,0,0},{255,0,255},{0,255,0},{255,0,0},{255,165,0},{255,255,0}, {218, 175, 55}};
+  //MAGENTA for standard wall
+  //GREEN for player
+  //RED for walls that kill you
+  //ORANGE for walls that turn on and off
+  //YELLOW for end zone
+  //GOLD for item (i.e. key)
 
 //#endif
 
 // ESP32 will recieve sensor reading from arduino nano sense 
-// Scan for audino connection 
+//Scan for audino connection 
 const char* arduinoServiceUuid = "d8b61347-0ce7-445e-830b-40c976921b35";
 const char* arduinoServiceCharacteristicUuid = "843fe463-99f5-4acc-91a2-93b82e5b36b2";
 
-// Player position
-uint8_t startX = 2;
-uint8_t startY = 2; 
-uint8_t curX = startX;
-uint8_t curY = startY; 
 
-// Game level 
+float8_t startX = 2.0;
+float8_t startY = 2.0; 
+float8_t curX = startX;
+float8_t curY = startY;
+unsigned long oldTime = 0;
+uint8_t (*maze)[32];
 uint8_t startingLv = 0; 
-uint8_t currentLv = startingLv; 
+uint8_t currentLv = startingLv;
+
 
 Adafruit_Protomatter matrix(
   32,          // Width of matrix (or matrix chain) in pixels
@@ -44,8 +53,7 @@ Adafruit_Protomatter matrix(
 // SETUP - RUNS ONCE AT PROGRAM START --------------------------------------
 
 void setup(void) {
-  Serial.begin(115200);
-
+  Serial.begin(9600);
   // Initialize matrix...
   ProtomatterStatus status = matrix.begin();
   Serial.print("Protomatter begin() status: ");
@@ -65,12 +73,10 @@ void setup(void) {
   Serial.println("* ESP32 ready to scan for connection!");
   BLE.scanForUuid(arduinoServiceUuid);
 
-  // Draw player
-  // Player color 
-  matrix.drawPixel(startX, startY, matrix.color565(0, 255, 0));
+  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1]), colors[GREEN][2]);
 
   // Draw the maze
-  renderNewMaze(startingLv);
+  renderNewMaze(startingLv); // Copy data to matrix buffers
 }
 
 // LOOP - RUNS REPEATEDLY AFTER SETUP --------------------------------------
@@ -99,7 +105,6 @@ void loop() {
   BLE.stopScan();
   readArduino(arduino); 
 
-  delay(100); 
 }
 
 void readArduino(BLEDevice arduino){
@@ -135,38 +140,84 @@ void readArduino(BLEDevice arduino){
   tiltChar.subscribe();
 
   while(arduino.connected()){
-
     BLE.poll();
-
     if (tiltChar.valueUpdated()) {
           uint8_t data[2];
           tiltChar.readValue(data, 2);
 
-          int8_t tiltX = (int8_t)data[0];
-          int8_t tiltY = (int8_t)data[1];
+          float8_t tiltX = data[0]/100.0;
+          float8_t tiltY = data[1]/100.0;
 
-          // TODO: Move player
+          // TODO: Move ball
           // Erase old pixel
-          matrix.drawPixel(curX, curY, 0);
+          matrix.drawPixel((uint8_t)curX, (uint8_t)curY, 0);
+
+          //Maximum speed of 1 block every 200 milliseconds
           //Draw new 
-          curX = constrain(curX, 0, 31);
-          curY = constrain(curY, 0, 31);
-          curX += tiltX;
-          curY += tiltY; 
-          matrix.drawPixel(curX, curY, matrix.color565(0, 255, 0));
+          
+          if (millis() - oldTime >= 200) {
+            curX += tiltX;
+            curY += tiltY; 
+            oldTime = millis();
+          }
+
+
+          //Check for collisions
+          switch(maze[(uint8_t)curY][(uint8_t)curX]) {
+            //Blank square -- all good
+            case 0:
+              break;
+
+
+            //Standard Wall - can't pass
+            case 1:
+              //Try moving along one axis and ignoring the other
+              tiltX > tiltY ? curY -= tiltY: curX -= tiltX;
+
+              //If that doesn't work, try moving only along the other axis instead
+              if (maze[(uint8_t)curY][(uint8_t)curX] != BLANK && maze[(uint8_t)curY][(uint8_t)curX] != YELLOW
+                   && maze[(uint8_t)curY][(uint8_t)curX] != GOLD) {
+
+
+                    tiltX > tiltY ? (curY += tiltY, curX -= tiltX) : (curX += tiltX, curY -= tiltY);
+
+                    //If this still fails, then don't move at all
+                    if (maze[(uint8_t)curY][(uint8_t)curX] != BLANK && maze[(uint8_t)curY][(uint8_t)curX] != YELLOW
+                      && maze[(uint8_t)curY][(uint8_t)curX] != GOLD) {
+                        tiltX > tiltY ? curY -= tiltY : curX -= tiltX;
+                      }
+              }
+
+
+              break; 
+
+            //Player spawn point -- irrelevant case
+            case 2:
+              break;
+
+            //Red wall -- death on contact
+            case 3:
+
+            //Orange wall -- can switch between on and off
+            case 4:
+
+            //Yellow wall -- win condition
+            case 5:
+            //maze = getMaze(winImageNum)
+
+            //Gold color (collectible item)
+            case 6:
+            default:
+              break;
+          }
+          curX = constrain(curX, 0.0, 31.0);
+          curY = constrain(curY, 0.0, 31.0);
+          matrix.drawPixel((uint8_t)curX, (uint8_t)curY, matrix.color565(colors[GREEN][0],colors[GREEN][1],colors[GREEN][2]));
           matrix.show();
 
           Serial.print("Tilt X: "); Serial.print(tiltX);
           Serial.print(" Y: "); Serial.println(tiltY);
 
-          // Todo: Game play logic 
-
-          // If current coordinate = end coordinate --> level completed 
-          // currentLevel++; 
-          // renderNewMaze(currentLevel); 
-
-          // If death 
-          // Display death screen 
 
         }
   }
@@ -175,16 +226,14 @@ void readArduino(BLEDevice arduino){
 }
 
 void renderNewMaze(uint8_t level){
-  uint8_t (*maze)[32]; 
 
   if(level < 5){
     maze = getMaze(level); 
     for(int x = 0; x < matrix.width(); x++){
       for(int y = 0; y < matrix.height(); y++){
-        if(maze[y][x] == 1){ 
-          // Magenta maze walls
-          matrix.drawPixel(x, y, matrix.color565(255, 0, 255));
-        }
+          uint8_t curPixelColor = maze[y][x];
+          matrix.drawPixel(x,y, matrix.color565(0,0,0));
+          matrix.drawPixel(x, y, matrix.color565(colors[curPixelColor][0], colors[curPixelColor][1], colors[curPixelColor][2]));
       }
     }
     matrix.show(); // Copy data to matrix buffers
@@ -192,3 +241,10 @@ void renderNewMaze(uint8_t level){
   
 }
 
+void winState() {
+
+}
+
+void loseState() {
+
+}
