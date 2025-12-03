@@ -56,11 +56,30 @@ void loop() {
         IMU.readAcceleration(x, y, z);
 
         //FIXME 
-        //Adjust scaling factor 12.9 as needed 
-        int8_t tiltX = constrain((int)(x * 12.9), -127, 127);
-        int8_t tiltY = constrain((int)(y * 12.9), -127, 127);
+        //Adjust scaling factor 12.9 as needed
+        float8_t tiltX;
+        float8_t tiltY;
 
-        uint8_t data[2] = {(uint8_t)tiltX, (uint8_t)tiltY};
+        //Deadzone of a tilt 0.2 or less
+        if (x < 0.2 && x > -0.2)
+          tiltX = 0.0;
+        else if (x > 0.9)
+          tiltX = 0.9;
+        else if (x < -0.9)
+          tiltX = -0.9;
+        else
+          tiltX = x;
+
+        if (y < 0.2 && y > -0.2)
+          tiltY = 0.0;
+        else if (y > 0.9)
+          tiltY = 0.9;
+        else if (y < -0.9)
+          tiltY = -0.9;
+        else
+          tiltY = y;
+
+        uint8_t data[2] = {(uint8_t)(100.0 * tiltX), (uint8_t)(100.0 * tiltY)};
         tiltCharacteristic.writeValue(data, 2);
 
         Serial.print("X: "); Serial.print(tiltX);
