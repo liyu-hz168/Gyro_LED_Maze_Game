@@ -77,6 +77,7 @@ void setup(void) {
 
   // Draw the maze
   renderNewMaze(startingLv); // Copy data to matrix buffers
+  oldTime = millis();
 }
 
 // LOOP - RUNS REPEATEDLY AFTER SETUP --------------------------------------
