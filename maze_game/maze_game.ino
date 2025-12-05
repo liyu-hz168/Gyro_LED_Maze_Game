@@ -16,8 +16,7 @@
   uint8_t latchPin   = 32;
   uint8_t oePin      = 33;
   enum COLOR {BLANK, MAGENTA, GREEN, RED, ORANGE, YELLOW, GOLD};
-  //uint8_t colors[][] = {{0,0,0},{255,0,255},{0,255,0},{255,0,0},{255,165,0},{255,255,0}, {218, 175, 55}};
-  uint8_t colors[7][3] = {{0,0,0},{255,0,255},{0,255,0},{255,0,0},{255,165,0},{255,255,0}, {218, 175, 55}};
+  uint8_t colors[][] = {{0,0,0},{255,0,255},{0,255,0},{255,0,0},{255,165,0},{255,255,0}, {218, 175, 55}};
   //MAGENTA for standard wall
   //GREEN for player
   //RED for walls that kill you
@@ -33,10 +32,6 @@ const char* arduinoServiceUuid = "d8b61347-0ce7-445e-830b-40c976921b35";
 const char* arduinoServiceCharacteristicUuid = "843fe463-99f5-4acc-91a2-93b82e5b36b2";
 
 
-// float8_t startX = 2.0;
-// float8_t startY = 2.0; 
-// float8_t curX = startX;
-// float8_t curY = startY;
 float_t startX = 2.0;
 float_t startY = 2.0; 
 float_t curX = startX;
@@ -78,13 +73,11 @@ void setup(void) {
   Serial.println("* ESP32 ready to scan for connection!");
   BLE.scanForUuid(arduinoServiceUuid);
 
-  matrix.drawPixel(startX, startY, matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
+  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1]), colors[GREEN][2]);
 
   // Draw the maze
   renderNewMaze(startingLv); // Copy data to matrix buffers
   oldTime = millis();
-  // FIXME 
-  matrix.show();
 }
 
 // LOOP - RUNS REPEATEDLY AFTER SETUP --------------------------------------
@@ -153,85 +146,79 @@ void readArduino(BLEDevice arduino){
           uint8_t data[2];
           tiltChar.readValue(data, 2);
 
-          // float8_t tiltX = data[0]/100.0;
-          // float8_t tiltY = data[1]/100.0;
-          float_t tiltX = data[0]/100.0;
-          float_t tiltY = data[1]/100.0;
+          float8_t tiltX = data[0]/100.0;
+          float8_t tiltY = data[1]/100.0;
 
           // TODO: Move ball
           // Erase old pixel
-          //matrix.drawPixel((uint8_t)curX, (uint8_t)curY, matrix.color565(0,0,0));
-          matrix.drawPixel((uint8_t)curX, (uint8_t)curY, 0);
 
           //Maximum speed of 1 block every 200 milliseconds
           //Draw new 
-          // float_t newX = 
-          // float_t newY = 
           
           if (millis() - oldTime >= 200) {
+            matrix.drawPixel((uint8_t)curX, (uint8_t)curY, matrix.color565(0,0,0));
             curX += tiltX;
             curY += tiltY; 
             oldTime = millis();
+          
+
+
+            //Check for collisions
+            switch(maze[(uint8_t)curY][(uint8_t)curX]) {
+              //Blank square -- all good
+              case 0:
+                break;
+
+
+              //Standard Wall - can't pass
+              case 1:
+                //Try moving along one axis and ignoring the other
+                tiltX > tiltY ? curY -= tiltY: curX -= tiltX;
+
+                //If that doesn't work, try moving only along the other axis instead
+                if (maze[(uint8_t)curY][(uint8_t)curX] != BLANK && maze[(uint8_t)curY][(uint8_t)curX] != YELLOW
+                    && maze[(uint8_t)curY][(uint8_t)curX] != GOLD) {
+
+
+                      tiltX > tiltY ? (curY += tiltY, curX -= tiltX) : (curX += tiltX, curY -= tiltY);
+
+                      //If this still fails, then don't move at all
+                      if (maze[(uint8_t)curY][(uint8_t)curX] != BLANK && maze[(uint8_t)curY][(uint8_t)curX] != YELLOW
+                        && maze[(uint8_t)curY][(uint8_t)curX] != GOLD) {
+                          tiltX > tiltY ? curY -= tiltY : curX -= tiltX;
+                        }
+                }
+
+
+                break; 
+
+              //Player spawn point -- irrelevant case
+              case 2:
+                break;
+
+              //Red wall -- death on contact
+              case 3:
+
+              //Orange wall -- can switch between on and off
+              case 4:
+
+              //Yellow wall -- win condition
+              case 5:
+              //maze = getMaze(winImageNum)
+
+              //Gold color (collectible item)
+              case 6:
+              default:
+                break;
+            }
+            curX = constrain(curX, 0.0, 31.0);
+            curY = constrain(curY, 0.0, 31.0);
+            matrix.drawPixel((uint8_t)curX, (uint8_t)curY, matrix.color565(colors[GREEN][0],colors[GREEN][1],colors[GREEN][2]));
+            matrix.show();
+
+            Serial.print("Tilt X: "); Serial.print(tiltX);
+            Serial.print(" Y: "); Serial.println(tiltY);
           }
-
-
-          //Check for collisions
-          switch(maze[(uint8_t)curY][(uint8_t)curX]) {
-            //Blank square -- all good
-            case 0:
-              break;
-
-
-            //Standard Wall - can't pass
-            case 1:
-              //Try moving along one axis and ignoring the other
-              tiltX > tiltY ? curY -= tiltY: curX -= tiltX;
-
-              //If that doesn't work, try moving only along the other axis instead
-              if (maze[(uint8_t)curY][(uint8_t)curX] != BLANK && maze[(uint8_t)curY][(uint8_t)curX] != YELLOW
-                   && maze[(uint8_t)curY][(uint8_t)curX] != GOLD) {
-
-
-                    // tiltX > tiltY ? (curY += tiltY, curX -= tiltX) : (curX += tiltX, curY -= tiltY);
-                    tiltX > tiltY ? (curY += tiltY, curX -= tiltX) : (curX += tiltX, curY -= tiltY);
-
-                    //If this still fails, then don't move at all
-                    if (maze[(uint8_t)curY][(uint8_t)curX] != BLANK && maze[(uint8_t)curY][(uint8_t)curX] != YELLOW
-                      && maze[(uint8_t)curY][(uint8_t)curX] != GOLD) {
-                        tiltX > tiltY ? curY -= tiltY : curX -= tiltX;
-                      }
-              }
-
-
-              break; 
-
-            //Player spawn point -- irrelevant case
-            case 2:
-              break;
-
-            //Red wall -- death on contact
-            case 3:
-
-            //Orange wall -- can switch between on and off
-            case 4:
-
-            //Yellow wall -- win condition
-            case 5:
-            //maze = getMaze(winImageNum)
-
-            //Gold color (collectible item)
-            case 6:
-            default:
-              break;
-          }
-          curX = constrain(curX, 0.0, 31.0);
-          curY = constrain(curY, 0.0, 31.0);
-          matrix.drawPixel((uint8_t)curX, (uint8_t)curY, matrix.color565(colors[GREEN][0],colors[GREEN][1],colors[GREEN][2]));
-          matrix.show();
-
-          Serial.print("Tilt X: "); Serial.print(tiltX);
-          Serial.print(" Y: "); Serial.println(tiltY);
-
 
         }
   }
@@ -250,7 +237,7 @@ void renderNewMaze(uint8_t level){
           matrix.drawPixel(x, y, matrix.color565(colors[curPixelColor][0], colors[curPixelColor][1], colors[curPixelColor][2]));
       }
     }
-    // matrix.show(); // Copy data to matrix buffers
+    matrix.show(); // Copy data to matrix buffers
   }
   
 }
