@@ -16,7 +16,8 @@
   uint8_t latchPin   = 32;
   uint8_t oePin      = 33;
   enum COLOR {BLANK, MAGENTA, GREEN, RED, ORANGE, YELLOW, GOLD};
-  uint8_t colors[][] = {{0,0,0},{255,0,255},{0,255,0},{255,0,0},{255,165,0},{255,255,0}, {218, 175, 55}};
+  //uint8_t colors[][] = {{0,0,0},{255,0,255},{0,255,0},{255,0,0},{255,165,0},{255,255,0}, {218, 175, 55}};
+  uint8_t colors[7][3] = {{0,0,0},{255,0,255},{0,255,0},{255,0,0},{255,165,0},{255,255,0}, {218, 175, 55}};
   //MAGENTA for standard wall
   //GREEN for player
   //RED for walls that kill you
@@ -32,10 +33,14 @@ const char* arduinoServiceUuid = "d8b61347-0ce7-445e-830b-40c976921b35";
 const char* arduinoServiceCharacteristicUuid = "843fe463-99f5-4acc-91a2-93b82e5b36b2";
 
 
-float8_t startX = 2.0;
-float8_t startY = 2.0; 
-float8_t curX = startX;
-float8_t curY = startY;
+// float8_t startX = 2.0;
+// float8_t startY = 2.0; 
+// float8_t curX = startX;
+// float8_t curY = startY;
+float_t startX = 2.0;
+float_t startY = 2.0; 
+float_t curX = startX;
+float_t curY = startY;
 unsigned long oldTime = 0;
 uint8_t (*maze)[32];
 uint8_t startingLv = 0; 
@@ -73,11 +78,13 @@ void setup(void) {
   Serial.println("* ESP32 ready to scan for connection!");
   BLE.scanForUuid(arduinoServiceUuid);
 
-  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1]), colors[GREEN][2]);
+  matrix.drawPixel(startX, startY, matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
 
   // Draw the maze
   renderNewMaze(startingLv); // Copy data to matrix buffers
   oldTime = millis();
+  // FIXME 
+  matrix.show();
 }
 
 // LOOP - RUNS REPEATEDLY AFTER SETUP --------------------------------------
@@ -146,15 +153,20 @@ void readArduino(BLEDevice arduino){
           uint8_t data[2];
           tiltChar.readValue(data, 2);
 
-          float8_t tiltX = data[0]/100.0;
-          float8_t tiltY = data[1]/100.0;
+          // float8_t tiltX = data[0]/100.0;
+          // float8_t tiltY = data[1]/100.0;
+          float_t tiltX = data[0]/100.0;
+          float_t tiltY = data[1]/100.0;
 
           // TODO: Move ball
           // Erase old pixel
-          matrix.drawPixel((uint8_t)curX, (uint8_t)curY, matrix.color565(0,0,0));
+          //matrix.drawPixel((uint8_t)curX, (uint8_t)curY, matrix.color565(0,0,0));
+          matrix.drawPixel((uint8_t)curX, (uint8_t)curY, 0);
 
           //Maximum speed of 1 block every 200 milliseconds
           //Draw new 
+          // float_t newX = 
+          // float_t newY = 
           
           if (millis() - oldTime >= 200) {
             curX += tiltX;
@@ -180,6 +192,7 @@ void readArduino(BLEDevice arduino){
                    && maze[(uint8_t)curY][(uint8_t)curX] != GOLD) {
 
 
+                    // tiltX > tiltY ? (curY += tiltY, curX -= tiltX) : (curX += tiltX, curY -= tiltY);
                     tiltX > tiltY ? (curY += tiltY, curX -= tiltX) : (curX += tiltX, curY -= tiltY);
 
                     //If this still fails, then don't move at all
@@ -237,7 +250,7 @@ void renderNewMaze(uint8_t level){
           matrix.drawPixel(x, y, matrix.color565(colors[curPixelColor][0], colors[curPixelColor][1], colors[curPixelColor][2]));
       }
     }
-    matrix.show(); // Copy data to matrix buffers
+    // matrix.show(); // Copy data to matrix buffers
   }
   
 }

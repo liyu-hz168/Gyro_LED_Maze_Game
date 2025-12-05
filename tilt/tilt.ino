@@ -57,8 +57,10 @@ void loop() {
 
         //FIXME 
         //Adjust scaling factor 12.9 as needed
-        float8_t tiltX;
-        float8_t tiltY;
+        // float8_t tiltX;
+        // float8_t tiltY;
+        float tiltX;
+        float tiltY;
 
         //Deadzone of a tilt 0.2 or less
         if (x < 0.2 && x > -0.2)
