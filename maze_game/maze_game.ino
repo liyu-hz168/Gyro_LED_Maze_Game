@@ -155,8 +155,8 @@ void readArduino(BLEDevice arduino){
 
           // float8_t tiltX = data[0]/100.0;
           // float8_t tiltY = data[1]/100.0;
-          float_t tiltX = data[0]/100.0;
-          float_t tiltY = data[1]/100.0;
+          float_t tiltX = (int8_t)data[0]/100.0;
+          float_t tiltY = (int8_t)data[1]/100.0;
 
           // TODO: Move ball
           // Erase old pixel
@@ -168,7 +168,7 @@ void readArduino(BLEDevice arduino){
           // float_t newX = 
           // float_t newY = 
           
-          if (millis() - oldTime >= 200) {
+          if (millis() - oldTime >= 25) {
             curX += tiltX;
             curY += tiltY; 
             oldTime = millis();
@@ -250,7 +250,7 @@ void renderNewMaze(uint8_t level){
           matrix.drawPixel(x, y, matrix.color565(colors[curPixelColor][0], colors[curPixelColor][1], colors[curPixelColor][2]));
       }
     }
-    // matrix.show(); // Copy data to matrix buffers
+    matrix.show(); // Copy data to matrix buffers
   }
   
 }

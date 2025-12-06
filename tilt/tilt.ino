@@ -81,7 +81,7 @@ void loop() {
         else
           tiltY = y;
 
-        uint8_t data[2] = {(uint8_t)(100.0 * tiltX), (uint8_t)(100.0 * tiltY)};
+        uint8_t data[2] = {(uint8_t)((int8_t)(100.0 * tiltX)), (uint8_t)((int8_t)(100.0 * tiltY))};
         tiltCharacteristic.writeValue(data, 2);
 
         Serial.print("X: "); Serial.print(tiltX);
