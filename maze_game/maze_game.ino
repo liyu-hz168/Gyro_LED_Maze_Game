@@ -16,7 +16,7 @@
   uint8_t latchPin   = 32;
   uint8_t oePin      = 33;
   enum COLOR {BLANK, MAGENTA, GREEN, RED, ORANGE, YELLOW, GOLD};
-  uint8_t colors[][] = {{0,0,0},{255,0,255},{0,255,0},{255,0,0},{255,165,0},{255,255,0}, {218, 175, 55}};
+  uint8_t colors[7][3] = {{0,0,0},{255,0,255},{0,255,0},{255,0,0},{255,165,0},{255,255,0}, {218, 175, 55}};
   //MAGENTA for standard wall
   //GREEN for player
   //RED for walls that kill you
@@ -72,7 +72,7 @@ void setup(void) {
   Serial.println("* ESP32 ready to scan for connection!");
   BLE.scanForUuid(arduinoServiceUuid);
 
-  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1]), colors[GREEN][2]);
+  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
 
   // Draw the maze
   renderNewMaze(currentLv); // Copy data to matrix buffers
@@ -139,6 +139,7 @@ void readArduino(BLEDevice arduino){
 
   tiltChar.subscribe();
 
+  nextlvl:
   while(arduino.connected()){
     BLE.poll();
     if (tiltChar.valueUpdated()) {
@@ -211,10 +212,10 @@ void readArduino(BLEDevice arduino){
               //Yellow wall -- win condition
               case 5:
                 matrix.drawPixel((uint8_t)curX, (uint8_t)curY, matrix.color565(colors[GREEN][0],colors[GREEN][1],colors[GREEN][2]));
-                matrix.show()
-                delay(15000);
+                matrix.show();
+                delay(1500);
                 winState();
-                return;
+                goto nextlvl;
 
               //Gold color (collectible item)
               case 6:
@@ -238,7 +239,7 @@ void readArduino(BLEDevice arduino){
 
 void renderNewMaze(uint8_t level){
 
-  if(level < 5){
+  if(level < 11){
     maze = getMaze(level); 
     for(int x = 0; x < matrix.width(); x++){
       for(int y = 0; y < matrix.height(); y++){
@@ -255,16 +256,20 @@ void renderNewMaze(uint8_t level){
 void winState() {
   renderNewMaze(10);
   currentLv++;
-  delay(5000);
+  delay(2500);
   oldTime = millis();
-  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1]), colors[GREEN][2]);
   renderNewMaze(currentLv);
+  curX = startX; 
+  curY = startY;
+  matrix.drawPixel(startX, startY, matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
+  matrix.show();
 }
 
 void loseState() {
   renderNewMaze(9);
-  delay(5000);
+  delay(2500);
   oldTime = millis();
-  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1]), colors[GREEN][2]);
   renderNewMaze(currentLv);
+  matrix.drawPixel(startX, startY, matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
+  matrix.show();
 }
