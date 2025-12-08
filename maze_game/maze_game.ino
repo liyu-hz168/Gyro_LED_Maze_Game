@@ -16,7 +16,7 @@
   uint8_t latchPin   = 32;
   uint8_t oePin      = 33;
   enum COLOR {BLANK, MAGENTA, GREEN, RED, BLUE, YELLOW, GOLD};
-  uint8_t colors[7][3] = {{0,0,0},{255,0,255},{0,255,0},{255,0,0},{0,100,255},{255,255,0}, {218, 175, 55}};
+  uint8_t colors[7][3] = {{0,0,0},{255,0,255},{0,255,0},{255,0,0},{0,100,255},{255,255,0},{218, 175, 55}};
   //MAGENTA for standard wall
   //GREEN for player
   //RED for walls that kill you
@@ -40,9 +40,45 @@ unsigned long oldTime = 0;
 uint8_t (*maze)[32];
 uint8_t currentLv = 0;
 
-// Variables controlling flashing blue walls
+
 unsigned long lastFlashTime = 0;
 bool blueWallsOn = true;
+
+
+//coordinates of each gold key (which unlocks a red gate), maximum of 3 per level
+uint8_t key_coords[5][3][2] = {
+  {
+    {21,10},{3,25},{-1,-1}
+  },
+
+  {
+    {},{},{}
+  },
+
+  {
+    {},{},{}
+  },
+
+  {
+
+  },
+
+  {
+
+  }
+};
+
+//coordinates for the gates associated with each golden key, maximum of 3 per level. Point ONLY to the topmost or leftmost pixel of the gate
+uint8_t gate_coords[5][3][2] = {
+ {
+  {7, 26}, {25,1}, {-1,-1}
+ },
+ {},
+ {},
+ {},
+ {},
+};
+
 
 Adafruit_Protomatter matrix(
   32,          // Width of matrix (or matrix chain) in pixels
@@ -75,7 +111,7 @@ void setup(void) {
   Serial.println("* ESP32 ready to scan for connection!");
   BLE.scanForUuid(arduinoServiceUuid);
 
-  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
+  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]);
 
   // Draw the maze
   renderNewMaze(currentLv); // Copy data to matrix buffers
@@ -164,6 +200,7 @@ void readArduino(BLEDevice arduino){
             curY += tiltY; 
             oldTime = millis();
           
+
             //Check to see if touching red   (Use for different color)
             // if (maze[(uint8_t)curY][(uint8_t)curX] == 3 || touchingRed(curX, curY)) {
             //   // red death animation
@@ -178,27 +215,28 @@ void readArduino(BLEDevice arduino){
             // }
 
             //Check for collisions
-          
             switch(maze[(uint8_t)curY][(uint8_t)curX]) {
               //Blank square -- all good
               case 0:
                 break;
 
-              //Standard Wall - can't pass
+
+
+//Standard Wall - can't pass
               case 1:
                 collisionDetection(tiltX, tiltY);
                 break;
 
-              //Blue wall -- switches between on and off at regular intervals (treat as normall wall when on)
+              //Blue wall -- switches between on and off at regular intervals (treat as normal wall when on)
               case 4:
-                if(blueWallsOn){
+                if(blueWallsOn)
                   collisionDetection(tiltX, tiltY);
-                }
                 break;
 
+
               //Player spawn point -- irrelevant case
-              // case 2:
-              //   break;
+              case 2:
+                break;
 
               //Red wall -- death on contact
               case 3:
@@ -206,9 +244,9 @@ void readArduino(BLEDevice arduino){
                   matrix.color565((colors[GREEN][0]+colors[RED][0])/2,(colors[GREEN][1]+colors[RED][1])/2,(colors[GREEN][2]+colors[RED][2])/2)
                 );
                 matrix.show();
-                delay(1500);
+                delay(2000);
                 loseState();
-                goto nextlvl;
+                return;
 
               //Yellow wall -- win condition
               case 5:
@@ -220,6 +258,32 @@ void readArduino(BLEDevice arduino){
 
               //Gold color (collectible item)
               case 6:
+                //Erase all gold pixels in radius 2
+                int gateNum = -1;
+                for(int yCount = (uint8_t)curY-2; yCount <= (uint8_t)curY+2; yCount++)
+                  for(int xCount = (uint8_t)curX -2; xCount <= (uint8_t)curX+2; xCount++) {
+                    if (xCount < 0 || xCount > 31 || yCount < 0 || yCount > 31)
+                      continue;
+                    if (maze[yCount][xCount] == GOLD) {
+                      maze[yCount][xCount] = -6;
+                      matrix.drawPixel(xCount, yCount, matrix.color565(0,0,0));
+
+                      //match this key to a gate
+                      for (int i = 0; i < 3 && gateNum < 0; i++) {
+                        int coords[2] = key_coords[currentLv][i];
+                        if (coords[0] == xCount && coords[1] == yCount) {
+                          gateNum = i;
+                          break;
+                        }
+                      }
+
+                      removeGate(gateNum);
+                    }
+                }
+                matrix.show();
+                break;
+
+              //any pixels that are not blank by default but can become blank
               default:
                 break;
             }
@@ -233,7 +297,6 @@ void readArduino(BLEDevice arduino){
           }
 
         }
-    flashBlue();
   }
   Serial.println("- Arduino disconnected.");
   BLE.scanForUuid(arduinoServiceUuid);
@@ -246,6 +309,7 @@ void renderNewMaze(uint8_t level){
     for(int x = 0; x < matrix.width(); x++){
       for(int y = 0; y < matrix.height(); y++){
           uint8_t curPixelColor = maze[y][x];
+          curPixelColor < BLANK? curPixelColor = BLANK: curPixelColor = curPixelColor;
           matrix.drawPixel(x,y, matrix.color565(0,0,0));
           matrix.drawPixel(x, y, matrix.color565(colors[curPixelColor][0], colors[curPixelColor][1], colors[curPixelColor][2]));
       }
@@ -324,25 +388,61 @@ void collisionDetection(float_t tiltX, float_t tiltY){
   }
 }
 
+void refreshMaze() {
+  for (int i = 0; i < 31; i++)
+    for (int j = 0; j < 31; j++)
+      if (maze[i][j] <= 0) {
+        maze[i][j] *= -1;
+      }
+}
+
 void winState() {
   renderNewMaze(10);
   currentLv++;
-  delay(2500);
+  delay(5000);
   oldTime = millis();
+  refreshMaze();
   renderNewMaze(currentLv);
-  curX = startX; 
+  curX = startX;
   curY = startY;
-  matrix.drawPixel(startX, startY, matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
+  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1]), colors[GREEN][2]);
   matrix.show();
 }
 
 void loseState() {
   renderNewMaze(9);
-  delay(2500);
+  delay(5000);
   oldTime = millis();
+  refreshMaze();
   renderNewMaze(currentLv);
-  curX = startX; 
+  curX = startX;
   curY = startY;
-  matrix.drawPixel(startX, startY, matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
+  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1]), colors[GREEN][2]);
   matrix.show();
+}
+
+void removeGate(int gateNum) {
+  int coords[2] = gate_coords[currentLv][gateNum];
+  bool RIGHT = false;
+  switch (maze[coords[1]][coords[0]+1]) {
+    case 3:
+      RIGHT = true;
+      break;
+    default:
+      break;
+  }
+  if (RIGHT)
+    //horizontal gate
+    for (int i = 0; maze[coords[1]][coords[0]+i] == RED; i++) {
+        maze[coords[1]][coords[0]+i] = -3;
+        matrix.drawPixel(coords[0]+i,coords[1], matrix.color565(0,0,0));
+    }
+
+
+  else
+    //vertical gate
+      for (int i = 0; maze[coords[1]+i][coords[0]] == RED; i++) {
+            maze[coords[1]+i][coords[0]] = -3;
+            matrix.drawPixel(coords[0]+i,coords[1], matrix.color565(0,0,0));
+       }
 }
