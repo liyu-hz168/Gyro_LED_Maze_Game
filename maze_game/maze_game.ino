@@ -15,12 +15,12 @@
   uint8_t clockPin   = 27; // Must be on same port as rgbPins
   uint8_t latchPin   = 32;
   uint8_t oePin      = 33;
-  enum COLOR {BLANK, MAGENTA, GREEN, RED, ORANGE, YELLOW, GOLD};
-  uint8_t colors[7][3] = {{0,0,0},{255,0,255},{0,255,0},{255,0,0},{255,165,0},{255,255,0}, {218, 175, 55}};
+  enum COLOR {BLANK, MAGENTA, GREEN, RED, BLUE, YELLOW, GOLD};
+  uint8_t colors[7][3] = {{0,0,0},{255,0,255},{0,255,0},{255,0,0},{0,100,255},{255,255,0}, {218, 175, 55}};
   //MAGENTA for standard wall
   //GREEN for player
   //RED for walls that kill you
-  //ORANGE for walls that turn on and off
+  //BLUE for walls that turn on and off
   //YELLOW for end zone
   //GOLD for item (i.e. key)
 
@@ -40,6 +40,9 @@ unsigned long oldTime = 0;
 uint8_t (*maze)[32];
 uint8_t currentLv = 0;
 
+// Variables controlling flashing blue walls
+unsigned long lastFlashTime = 0;
+bool blueWallsOn = true;
 
 Adafruit_Protomatter matrix(
   32,          // Width of matrix (or matrix chain) in pixels
@@ -161,43 +164,41 @@ void readArduino(BLEDevice arduino){
             curY += tiltY; 
             oldTime = millis();
           
-
+            //Check to see if touching red   (Use for different color)
+            // if (maze[(uint8_t)curY][(uint8_t)curX] == 3 || touchingRed(curX, curY)) {
+            //   // red death animation
+            //   matrix.drawPixel((uint8_t)curX, (uint8_t)curY, 
+            //       matrix.color565((colors[GREEN][0]+colors[RED][0])/2,
+            //                       (colors[GREEN][1]+colors[RED][1])/2,
+            //                       (colors[GREEN][2]+colors[RED][2])/2));
+            //   matrix.show();
+            //   delay(1500);
+            //   loseState();
+            //   goto nextlvl;
+            // }
 
             //Check for collisions
+          
             switch(maze[(uint8_t)curY][(uint8_t)curX]) {
               //Blank square -- all good
               case 0:
                 break;
 
-
-
               //Standard Wall - can't pass
               case 1:
-              //Orange wall -- switches between on and off at regular intervals (treat as normall wall when on)
+                collisionDetection(tiltX, tiltY);
+                break;
+
+              //Blue wall -- switches between on and off at regular intervals (treat as normall wall when on)
               case 4:
-                //Try moving along one axis and ignoring the other
-                tiltX > tiltY ? curY -= tiltY: curX -= tiltX;
-
-                //If that doesn't work, try moving only along the other axis instead
-                if (maze[(uint8_t)curY][(uint8_t)curX] != BLANK && maze[(uint8_t)curY][(uint8_t)curX] != YELLOW
-                    && maze[(uint8_t)curY][(uint8_t)curX] != GOLD) {
-
-
-                      tiltX > tiltY ? (curY += tiltY, curX -= tiltX) : (curX += tiltX, curY -= tiltY);
-
-                      //If this still fails, then don't move at all
-                      if (maze[(uint8_t)curY][(uint8_t)curX] != BLANK && maze[(uint8_t)curY][(uint8_t)curX] != YELLOW
-                        && maze[(uint8_t)curY][(uint8_t)curX] != GOLD) {
-                          tiltX > tiltY ? curY -= tiltY : curX -= tiltX;
-                        }
+                if(blueWallsOn){
+                  collisionDetection(tiltX, tiltY);
                 }
-
-
-                break; 
+                break;
 
               //Player spawn point -- irrelevant case
-              case 2:
-                break;
+              // case 2:
+              //   break;
 
               //Red wall -- death on contact
               case 3:
@@ -205,9 +206,9 @@ void readArduino(BLEDevice arduino){
                   matrix.color565((colors[GREEN][0]+colors[RED][0])/2,(colors[GREEN][1]+colors[RED][1])/2,(colors[GREEN][2]+colors[RED][2])/2)
                 );
                 matrix.show();
-                delay(2000);
+                delay(1500);
                 loseState();
-                return;
+                goto nextlvl;
 
               //Yellow wall -- win condition
               case 5:
@@ -232,6 +233,7 @@ void readArduino(BLEDevice arduino){
           }
 
         }
+    flashBlue();
   }
   Serial.println("- Arduino disconnected.");
   BLE.scanForUuid(arduinoServiceUuid);
@@ -253,6 +255,75 @@ void renderNewMaze(uint8_t level){
   
 }
 
+void flashBlue(){
+  unsigned long now = millis();
+  if (now - lastFlashTime >= 2000) {
+    lastFlashTime = millis(); 
+    blueWallsOn = !blueWallsOn;
+
+    for(int x = 0; x < matrix.width(); x++){
+      for(int y = 0; y < matrix.height(); y++){
+        uint8_t curPixelColor = maze[y][x];
+        // If blue, flash the wall turn off
+        if(curPixelColor == 4){
+          if (blueWallsOn) {
+            matrix.drawPixel(x, y, matrix.color565(colors[4][0], colors[4][1], colors[4][2]));
+            }
+          else {
+            matrix.drawPixel(x, y, matrix.color565(0,0,0));
+          }
+        }
+      }
+    }
+
+    // Redraw player
+    matrix.drawPixel((uint8_t)curX, (uint8_t)curY, matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
+    matrix.show();
+  }
+     
+}
+
+bool touchingRed(float x, float y) {
+  int cx = (int)x;
+  int cy = (int)y;
+
+  // Check current tile and 4 neighbors
+  for (int dy = -1; dy <= 1; dy++) {
+    for (int dx = -1; dx <= 1; dx++) {
+      // Don't check (-1, -1)(-1, 1)(1, -1)(1, 1)
+      if ((dy == -1 && dx == -1) || (dy == -1 && dx == 1) || (dy == 1 && dx == -1) || (dy == 1 && dx == 1)){
+        continue;
+      }
+      int nx = cx + dx;
+      int ny = cy + dy;
+
+      if (nx < 0 || nx > 31 || ny < 0 || ny > 31) continue;
+      if (maze[ny][nx] == 3) { 
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void collisionDetection(float_t tiltX, float_t tiltY){
+  //Try moving along one axis and ignoring the other
+  tiltX > tiltY ? curY -= tiltY: curX -= tiltX;
+
+  //If that doesn't work, try moving only along the other axis instead
+  if (maze[(uint8_t)curY][(uint8_t)curX] != BLANK && maze[(uint8_t)curY][(uint8_t)curX] != YELLOW
+      && maze[(uint8_t)curY][(uint8_t)curX] != GOLD) {
+
+        tiltX > tiltY ? (curY += tiltY, curX -= tiltX) : (curX += tiltX, curY -= tiltY);
+
+        //If this still fails, then don't move at all
+        if (maze[(uint8_t)curY][(uint8_t)curX] != BLANK && maze[(uint8_t)curY][(uint8_t)curX] != YELLOW
+          && maze[(uint8_t)curY][(uint8_t)curX] != GOLD) {
+            tiltX > tiltY ? curY -= tiltY : curX -= tiltX;
+        }
+  }
+}
+
 void winState() {
   renderNewMaze(10);
   currentLv++;
@@ -270,6 +341,8 @@ void loseState() {
   delay(2500);
   oldTime = millis();
   renderNewMaze(currentLv);
+  curX = startX; 
+  curY = startY;
   matrix.drawPixel(startX, startY, matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
   matrix.show();
 }
