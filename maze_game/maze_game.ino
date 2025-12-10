@@ -229,8 +229,20 @@ void readArduino(BLEDevice arduino){
 
               //Blue wall -- switches between on and off at regular intervals (treat as normal wall when on)
               case 4:
-                if(blueWallsOn)
+                if(blueWallsOn) {
+                  //If you are on a blank square that turns blue WHILE you are on it, you die
+                  if (maze[(uint8_t)(curY-tiltY)][(uint8_t)(curX-tiltX)] == BLUE) {
+                    matrix.drawPixel((uint8_t)(curX-tiltX), (uint8_t)(curY-tiltY), 
+                      matrix.color565((colors[GREEN][0]+colors[BLUE][0])/2,(colors[GREEN][1]+colors[BLUE][1])/2,(colors[GREEN][2]+colors[BLUE][2])/2)
+                    );
+                    delay(2000);
+                    loseState();
+                    goto nextlvl;
+                  }
+
                   collisionDetection(tiltX, tiltY);
+
+                }
                 break;
 
 
@@ -246,7 +258,7 @@ void readArduino(BLEDevice arduino){
                 matrix.show();
                 delay(2000);
                 loseState();
-                return;
+                goto nextlvl;
 
               //Yellow wall -- win condition
               case 5:
@@ -329,9 +341,9 @@ void flashBlue(){
       for(int y = 0; y < matrix.height(); y++){
         uint8_t curPixelColor = maze[y][x];
         // If blue, flash the wall turn off
-        if(curPixelColor == 4){
+        if(curPixelColor == BLUE){
           if (blueWallsOn) {
-            matrix.drawPixel(x, y, matrix.color565(colors[4][0], colors[4][1], colors[4][2]));
+            matrix.drawPixel(x, y, matrix.color565(colors[BLUE][0], colors[BLUE][1], colors[BLUE][2]));
             }
           else {
             matrix.drawPixel(x, y, matrix.color565(0,0,0));
