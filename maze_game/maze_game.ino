@@ -38,7 +38,7 @@ float_t curX = startX;
 float_t curY = startY;
 unsigned long oldTime = 0;
 uint8_t (*maze)[32];
-uint8_t currentLv = 0;
+uint8_t currentLv = 3;
 
 
 unsigned long lastFlashTime = 0;
@@ -235,7 +235,7 @@ void readArduino(BLEDevice arduino){
                     matrix.drawPixel((uint8_t)(curX-tiltX), (uint8_t)(curY-tiltY), 
                       matrix.color565((colors[GREEN][0]+colors[BLUE][0])/2,(colors[GREEN][1]+colors[BLUE][1])/2,(colors[GREEN][2]+colors[BLUE][2])/2)
                     );
-                    delay(2000);
+                    delay(1000);
                     loseState();
                     goto nextlvl;
                   }
@@ -315,7 +315,7 @@ void readArduino(BLEDevice arduino){
             Serial.print("Tilt X: "); Serial.print(tiltX);
             Serial.print(" Y: "); Serial.println(tiltY);
           }
-
+          flashBlue();
         }
   }
   Serial.println("- Arduino disconnected.");
