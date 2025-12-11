@@ -111,7 +111,7 @@ void setup(void) {
   Serial.println("* ESP32 ready to scan for connection!");
   BLE.scanForUuid(arduinoServiceUuid);
 
-  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]);
+  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
 
   // Draw the maze
   renderNewMaze(currentLv); // Copy data to matrix buffers
@@ -259,6 +259,7 @@ void readArduino(BLEDevice arduino){
                 delay(2000);
                 loseState();
                 goto nextlvl;
+                break; 
 
               //Yellow wall -- win condition
               case 5:
@@ -267,36 +268,40 @@ void readArduino(BLEDevice arduino){
                 delay(1500);
                 winState();
                 goto nextlvl;
+                break;
 
               //Gold color (collectible item)
               case 6:
-                //Erase all gold pixels in radius 2
-                int gateNum = -1;
-                for(int yCount = (uint8_t)curY-2; yCount <= (uint8_t)curY+2; yCount++)
-                  for(int xCount = (uint8_t)curX -2; xCount <= (uint8_t)curX+2; xCount++) {
-                    if (xCount < 0 || xCount > 31 || yCount < 0 || yCount > 31)
-                      continue;
-                    if (maze[yCount][xCount] == GOLD) {
-                      maze[yCount][xCount] = -6;
-                      matrix.drawPixel(xCount, yCount, matrix.color565(0,0,0));
+                {
+                  //Erase all gold pixels in radius 2
+                  int gateNum = -1;
+                  for(int yCount = (uint8_t)curY-2; yCount <= (uint8_t)curY+2; yCount++)
+                    for(int xCount = (uint8_t)curX -2; xCount <= (uint8_t)curX+2; xCount++) {
+                      if (xCount < 0 || xCount > 31 || yCount < 0 || yCount > 31)
+                        continue;
+                      if (maze[yCount][xCount] == GOLD) {
+                        maze[yCount][xCount] = -6;
+                        matrix.drawPixel(xCount, yCount, matrix.color565(0,0,0));
 
-                      //match this key to a gate
-                      for (int i = 0; i < 3 && gateNum < 0; i++) {
-                        //dummy placeholder coordinates (0,0), means there is no key in this slot
-                        if (coords[0] == 0 && coords[1] == 0)
-                          break;
-                        int coords[2] = key_coords[currentLv][i];
-                        if (coords[0] == xCount && coords[1] == yCount) {
-                          gateNum = i;
-                          break;
+                        //match this key to a gate
+                        for (int i = 0; i < 3 && gateNum < 0; i++) {
+                          //dummy placeholder coordinates (0,0), means there is no key in this slot
+                          int coords[2] = {key_coords[currentLv][i][0], key_coords[currentLv][i][1]};
+                          if (coords[0] == 0 && coords[1] == 0)
+                            break;
+                          if (coords[0] == xCount && coords[1] == yCount) {
+                            gateNum = i;
+                            break;
+                          }
                         }
-                      }
 
-                      removeGate(gateNum);
-                    }
+                        removeGate(gateNum);
+                      }
+                  }
+                  matrix.show();
+                  break;
                 }
-                matrix.show();
-                break;
+                
 
               //any pixels that are not blank by default but can become blank
               default:
@@ -420,7 +425,7 @@ void winState() {
   renderNewMaze(currentLv);
   curX = startX;
   curY = startY;
-  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1]), colors[GREEN][2]);
+  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
   matrix.show();
 }
 
@@ -432,12 +437,12 @@ void loseState() {
   renderNewMaze(currentLv);
   curX = startX;
   curY = startY;
-  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1]), colors[GREEN][2]);
+  matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
   matrix.show();
 }
 
 void removeGate(int gateNum) {
-  int coords[2] = gate_coords[currentLv][gateNum];
+  int coords[2] = {gate_coords[currentLv][gateNum][0], gate_coords[currentLv][gateNum][1]};
   bool RIGHT = false;
   switch (maze[coords[1]][coords[0]+1]) {
     case 3:
@@ -458,6 +463,6 @@ void removeGate(int gateNum) {
     //vertical gate
       for (int i = 0; maze[coords[1]+i][coords[0]] == RED; i++) {
             maze[coords[1]+i][coords[0]] = -3;
-            matrix.drawPixel(coords[0]+i,coords[1], matrix.color565(0,0,0));
+            matrix.drawPixel(coords[0],coords[1]+i, matrix.color565(0,0,0));
        }
 }
