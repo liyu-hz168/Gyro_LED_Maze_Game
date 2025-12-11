@@ -48,7 +48,7 @@ bool blueWallsOn = true;
 //coordinates of each gold key (which unlocks a red gate), maximum of 3 per level
 uint8_t key_coords[5][3][2] = {
   {
-    {21,10},{3,25},{-1,-1}
+    {21,10},{3,25},{0,0}
   },
 
   {
@@ -71,7 +71,7 @@ uint8_t key_coords[5][3][2] = {
 //coordinates for the gates associated with each golden key, maximum of 3 per level. Point ONLY to the topmost or leftmost pixel of the gate
 uint8_t gate_coords[5][3][2] = {
  {
-  {7, 26}, {25,1}, {-1,-1}
+  {7, 26}, {25,1}, {0,0}
  },
  {},
  {},
@@ -282,6 +282,9 @@ void readArduino(BLEDevice arduino){
 
                       //match this key to a gate
                       for (int i = 0; i < 3 && gateNum < 0; i++) {
+                        //dummy placeholder coordinates (0,0), means there is no key in this slot
+                        if (coords[0] == 0 && coords[1] == 0)
+                          break;
                         int coords[2] = key_coords[currentLv][i];
                         if (coords[0] == xCount && coords[1] == yCount) {
                           gateNum = i;
