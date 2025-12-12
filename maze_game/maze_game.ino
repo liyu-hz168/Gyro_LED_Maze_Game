@@ -340,8 +340,6 @@ void renderNewMaze(uint8_t level){
           curPixelColor < BLANK? curPixelColor = BLANK: curPixelColor = curPixelColor;
           matrix.drawPixel(x,y, matrix.color565(0,0,0));
           matrix.drawPixel(x, y, matrix.color565(colors[curPixelColor][0], colors[curPixelColor][1], colors[curPixelColor][2]));
-          if (curPixelColor > 6 || curPixelColor < 0)
-            Serial.print(curPixelColor);
       }
     }
     matrix.show(); // Copy data to matrix buffers
@@ -419,19 +417,19 @@ void collisionDetection(float_t tiltX, float_t tiltY){
 }
 
 void refreshMaze() {
-  for (int i = 0; i < 31; i++)
-    for (int j = 0; j < 31; j++)
+  for (int i = 0; i <= 31; i++)
+    for (int j = 0; j <= 31; j++)
       if (maze[i][j] >= (uint8_t)100) {
         maze[i][j] = 255 - maze[i][j];
       }
 }
 
 void winState() {
+  refreshMaze();
   renderNewMaze(10);
   currentLv++;
   delay(5000);
   oldTime = millis();
-  refreshMaze();
   renderNewMaze(currentLv);
   curX = startX;
   curY = startY;
@@ -440,10 +438,10 @@ void winState() {
 }
 
 void loseState() {
+  refreshMaze();
   renderNewMaze(9);
   delay(5000);
   oldTime = millis();
-  refreshMaze();
   renderNewMaze(currentLv);
   curX = startX;
   curY = startY;

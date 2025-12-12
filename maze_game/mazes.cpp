@@ -255,7 +255,7 @@ uint8_t (*getMaze(int number))[32] {
         case 1: return maze1;
         case 2: return maze2; 
         case 3: return maze3;
-        //case 4: return maze4;
+        case 4: return maze4;
         case 9: return DEATH;
         case 10: return WIN;
         default: return maze0;  
