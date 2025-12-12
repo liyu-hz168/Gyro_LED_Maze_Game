@@ -438,12 +438,12 @@ void collisionDetection(float_t tiltX, float_t tiltY){
 }
 
 void refreshMaze() {
-  for (int i = 0; i <= 31; i++)
-    for (int j = 0; j <= 31; j++)
-      if (maze[i][j] >= (uint8_t)100) {
+  for (int i = 0; i <= 31; i++){
+    for (int j = 0; j <= 31; j++){
+       if (maze[i][j] >= (uint8_t)100) {
         maze[i][j] = 255 - maze[i][j];
       }
-    }
+    }   
   }
 }
 
