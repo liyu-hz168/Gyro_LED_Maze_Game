@@ -30,7 +30,7 @@
 // Scan for audino connection 
 const char* arduinoServiceUuid = "d8b61347-0ce7-445e-830b-40c976921b35";
 const char* arduinoServiceCharacteristicUuid = "843fe463-99f5-4acc-91a2-93b82e5b36b2";
-
+const char* gameCharacteristicUuid = "b824d997-58fc-4e70-9409-139acf0bed38";
 
 float_t startX = 2.0;
 float_t startY = 2.0; 
@@ -44,6 +44,8 @@ uint8_t currentLv = 3;
 unsigned long lastFlashTime = 0;
 bool blueWallsOn = true;
 
+BLECharacteristic tiltChar;   // Nano -> ESP32
+BLECharacteristic gameChar;    // ESP32 -> Nano
 
 //coordinates of each gold key (which unlocks a red gate), maximum of 3 per level
 uint8_t key_coords[5][3][2] = {
@@ -177,9 +179,13 @@ void readArduino(BLEDevice arduino){
     return;
   }
 
-  BLECharacteristic tiltChar = arduino.characteristic(arduinoServiceCharacteristicUuid);
-  if (!tiltChar) {
+  // BLECharacteristic tiltChar = arduino.characteristic(arduinoServiceCharacteristicUuid);
+  tiltChar = arduino.characteristic(arduinoServiceCharacteristicUuid);
+  gameChar = arduino.characteristic(gameCharacteristicUuid);
+  
+  if (!tiltChar || !gameChar) {
     Serial.println("* Tilt characteristic not found!");
+    Serial.println("* Game characteristic not found!");
     arduino.disconnect();
     return;
   }
@@ -192,7 +198,7 @@ void readArduino(BLEDevice arduino){
     if (tiltChar.valueUpdated()) {
           uint8_t data[2];
           tiltChar.readValue(data, 2);
-          // game reset logic, if rechieve reset signal {255, 255}[]
+          // game reset logic, if rechieve reset signal {255, 255}
           if (data[0] == 255 && data[1] == 255) {
               Serial.println("RESET command received!");
 
@@ -458,6 +464,11 @@ void winState() {
   curY = startY;
   matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
   matrix.show();
+
+  // Send win status to ESP32 
+  uint8_t toArduino[2] = {1, 1};
+  gameChar.writeValue(toArduino, 2);
+  
 }
 
 void loseState() {
@@ -470,6 +481,11 @@ void loseState() {
   curY = startY;
   matrix.drawPixel(startX,startY,matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2]));
   matrix.show();
+
+  // Send lose status to ESP32 
+  uint8_t toArduino[2] = {2, 2};
+  gameChar.writeValue(toArduino, 2);
+  
 }
 
 void removeGate(int gateNum) {
