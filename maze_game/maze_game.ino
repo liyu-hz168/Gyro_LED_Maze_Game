@@ -52,11 +52,11 @@ uint8_t key_coords[5][3][2] = {
   },
 
   {
-    {8,11}, {26, 13}, {23,6}
+    {8,11}, {26, 13}, {6,23}
   },
 
   {
-    {16,21}, {7,17}, {2,29}
+    {17,19}, {7,17}, {2,29}
   },
 
   {
@@ -80,7 +80,7 @@ uint8_t gate_coords[5][3][2] = {
   {23,6}, {15,27}, {20,24}
  },
  {
-  {9, 5},{10,13},{3, 16}
+  {9, 5},{10,13},{2, 16}
  },
  {
   {21,3}, {9,21}, {12,28}
@@ -288,7 +288,7 @@ void readArduino(BLEDevice arduino){
                       if (xCount < 0 || xCount > 31 || yCount < 0 || yCount > 31)
                         continue;
                       if (maze[yCount][xCount] == GOLD) {
-                        maze[yCount][xCount] = (uint8_t)-6;
+                        maze[yCount][xCount] = (uint8_t)(-6);
                         matrix.drawPixel(xCount, yCount, matrix.color565(0,0,0));
 
                         //match this key to a gate
@@ -420,7 +420,7 @@ void refreshMaze() {
   for (int i = 0; i < 31; i++)
     for (int j = 0; j < 31; j++)
       if ((int8_t)(maze[i][j]) <= 0) {
-        maze[i][j] = (uint8_t)(-1 * (int8_t)maze[i][j]);
+        maze[i][j] = (uint8_t)(-1 * (int8_t)(maze[i][j]));
       }
 }
 
@@ -462,7 +462,7 @@ void removeGate(int gateNum) {
   if (RIGHT)
     //horizontal gate
     for (int i = 0; maze[coords[1]][coords[0]+i] == RED; i++) {
-        maze[coords[1]][coords[0]+i] = (uint8_t)-3;
+        maze[coords[1]][coords[0]+i] = (uint8_t)(-3);
         matrix.drawPixel(coords[0]+i,coords[1], matrix.color565(0,0,0));
     }
 
@@ -470,7 +470,7 @@ void removeGate(int gateNum) {
   else
     //vertical gate
       for (int i = 0; maze[coords[1]+i][coords[0]] == RED; i++) {
-            maze[coords[1]+i][coords[0]] = (uint8_t)-3;
+            maze[coords[1]+i][coords[0]] = (uint8_t)(-3);
             matrix.drawPixel(coords[0],coords[1]+i, matrix.color565(0,0,0));
        }
 }
