@@ -119,6 +119,7 @@ void setup() {
 }
 
 void loop() {
+
   updateAudio();
 
   if (soundState != SOUND_PLAYING) {
