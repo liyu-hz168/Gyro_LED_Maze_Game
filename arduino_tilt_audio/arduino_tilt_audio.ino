@@ -9,13 +9,13 @@ const char* arduinoServiceCharacteristicUuid = "843fe463-99f5-4acc-91a2-93b82e5b
 BLEService tiltService(arduinoServiceUuid); 
 BLECharacteristic tiltCharacteristic(arduinoServiceCharacteristicUuid, BLERead | BLENotify, 2);
 
+#define RESET_BUTTON_PIN 9
 
 void setup() {
 
-  //pinMode(LED_BUILTIN, OUTPUT); 
-
   Serial.begin(9600);
-  //while(!Serial);
+  
+  pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);
 
   if(!IMU.begin()){
     Serial.println("* IMU initialization failed!");
@@ -51,12 +51,17 @@ void loop() {
     while (esp32.connected()) {
       BLE.poll();
       float x, y, z;
+      // Check reset button (active LOW)
+      if (digitalRead(RESET_BUTTON_PIN) == LOW) {
+          uint8_t resetData[2] = {255, 255};  // 255, 255 = reset value
+          tiltCharacteristic.writeValue(resetData, 2);
+          delay(300);  
+          continue;    
+      }
 
       if (IMU.accelerationAvailable()) {
         IMU.readAcceleration(x, y, z);
 
-        //FIXME 
-        //Adjust scaling factor 12.9 as needed
         float_t tiltX;
         float_t tiltY;
 
@@ -78,7 +83,7 @@ void loop() {
           tiltY = -0.9;
         else
           tiltY = y;
-
+        
         uint8_t data[2] = {(uint8_t)((int8_t)(100.0 * tiltX)), (uint8_t)((int8_t)(100.0 * tiltY))};
         tiltCharacteristic.writeValue(data, 2);
 

@@ -27,7 +27,7 @@
 //#endif
 
 // ESP32 will recieve sensor reading from arduino nano sense 
-//Scan for audino connection 
+// Scan for audino connection 
 const char* arduinoServiceUuid = "d8b61347-0ce7-445e-830b-40c976921b35";
 const char* arduinoServiceCharacteristicUuid = "843fe463-99f5-4acc-91a2-93b82e5b36b2";
 
@@ -192,6 +192,24 @@ void readArduino(BLEDevice arduino){
     if (tiltChar.valueUpdated()) {
           uint8_t data[2];
           tiltChar.readValue(data, 2);
+          // game reset logic, if rechieve reset signal {255, 255}[]
+          if (data[0] == 255 && data[1] == 255) {
+              Serial.println("RESET command received!");
+
+              currentLv = 0;        
+              refreshMaze();
+              renderNewMaze(currentLv);
+
+              curX = startX;
+              curY = startY;
+
+              matrix.drawPixel(startX, startY,
+                  matrix.color565(colors[GREEN][0], colors[GREEN][1], colors[GREEN][2])
+              );
+              matrix.show();
+
+              continue;  
+          }
 
           float_t tiltX = (int8_t)data[0]/100.0;
           float_t tiltY = (int8_t)data[1]/100.0;
@@ -230,7 +248,7 @@ void readArduino(BLEDevice arduino){
 
 
 
-//Standard Wall - can't pass
+              //Standard Wall - can't pass
               case 1:
                 collisionDetection(tiltX, tiltY);
                 break;
@@ -289,6 +307,8 @@ void readArduino(BLEDevice arduino){
                         continue;
                       if (maze[yCount][xCount] == GOLD) {
                         maze[yCount][xCount] = 255-6;
+                        // Serial.print(maze[yCount][xCount]);
+                        // Serial.print("\n");
                         matrix.drawPixel(xCount, yCount, matrix.color565(0,0,0));
 
                         //match this key to a gate
@@ -320,8 +340,8 @@ void readArduino(BLEDevice arduino){
             matrix.drawPixel((uint8_t)curX, (uint8_t)curY, matrix.color565(colors[GREEN][0],colors[GREEN][1],colors[GREEN][2]));
             matrix.show();
 
-            Serial.print("Tilt X: "); Serial.print(tiltX);
-            Serial.print(" Y: "); Serial.println(tiltY);
+            // Serial.print("Tilt X: "); Serial.print(tiltX);
+            // Serial.print(" Y: "); Serial.println(tiltY);
           }
           flashBlue();
         }
@@ -340,8 +360,8 @@ void renderNewMaze(uint8_t level){
           curPixelColor < BLANK? curPixelColor = BLANK: curPixelColor = curPixelColor;
           matrix.drawPixel(x,y, matrix.color565(0,0,0));
           matrix.drawPixel(x, y, matrix.color565(colors[curPixelColor][0], colors[curPixelColor][1], colors[curPixelColor][2]));
-          if (curPixelColor > 6 || curPixelColor < 0)
-            Serial.print(curPixelColor);
+          //if (curPixelColor > 6 || curPixelColor < 0)
+            //Serial.print(curPixelColor);
       }
     }
     matrix.show(); // Copy data to matrix buffers
@@ -419,19 +439,21 @@ void collisionDetection(float_t tiltX, float_t tiltY){
 }
 
 void refreshMaze() {
-  for (int i = 0; i < 31; i++)
-    for (int j = 0; j < 31; j++)
+  for (int i = 0; i < 31; i++){
+    for (int j = 0; j < 31; j++){
       if (maze[i][j] >= (uint8_t)100) {
         maze[i][j] = 255 - maze[i][j];
       }
+    }
+  }
 }
 
 void winState() {
+  refreshMaze();
   renderNewMaze(10);
   currentLv++;
-  delay(5000);
+  delay(2500);
   oldTime = millis();
-  refreshMaze();
   renderNewMaze(currentLv);
   curX = startX;
   curY = startY;
@@ -440,10 +462,10 @@ void winState() {
 }
 
 void loseState() {
-  renderNewMaze(9);
-  delay(5000);
-  oldTime = millis();
   refreshMaze();
+  renderNewMaze(9);
+  delay(2500);
+  oldTime = millis();
   renderNewMaze(currentLv);
   curX = startX;
   curY = startY;
