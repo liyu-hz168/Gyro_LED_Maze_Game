@@ -1,7 +1,7 @@
 # Gyro-Controlled LED Maze Game 
 A tilt-controlled LED maze game implemented using an Arduino Nano 33 BLE Sense and an ESP32. The Arduino streams real-time accelerometer data over Bluetooth, 
-while the ESP32 handles game logic and renders gameplay on a 32×32 RGB LED matrix. Audio was prototyped but removed due to Bluetooth timing interference.
-
+while the ESP32 handles game logic and renders gameplay on a 32×32 RGB LED matrix. Audio was prototyped but removed due to Bluetooth timing interference. This project was developed 
+as a final project for CS 335 - Inside the Box: How Computers Work.
 # Demo 
 **Controlling the player:**
 
