@@ -27,6 +27,8 @@ https://github.com/user-attachments/assets/6d63cc51-76a7-4f44-a48a-a2b6654cc52d
 
 https://github.com/user-attachments/assets/00679928-4a08-4b9e-8267-90c315022300
 
+(Thank you, Sophia, for being our first ever gameplay tester 🙏)
+
 # Game Logic Overview 
 ### Player Movement
  The Arduino reads accelerometer data from its onboard IMU.
